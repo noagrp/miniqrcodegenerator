@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mini News Hub</title>
+    <style>
+        body { margin: 0; background: #080808; color: #fff; font-family: sans-serif; overflow-x: hidden; }
+        .carousel-container { display: flex; align-items: center; height: 100vh; overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 50px; }
+        .card { flex: 0 0 350px; height: 450px; background: #1a1a1a; margin: 0 20px; border-radius: 20px; transition: 0.5s; scroll-snap-align: center; border: 2px solid #333; display: flex; flex-direction: column; overflow: hidden; }
+        .card.active { transform: scale(1.1); border-color: #007bff; box-shadow: 0 0 20px rgba(0,123,255,0.4); }
+        iframe { width: 100%; height: 250px; border: none; pointer-events: none; }
+        .card.active iframe { pointer-events: auto; }
+        .info { padding: 20px; text-align: center; }
+        .category { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+        h2 { margin: 10px 0; font-size: 18px; }
+    </style>
+</head>
+<body>
+
+<div class="carousel-container" id="hub"></div>
+
+<script>
+    const data = [
+        // Malaysia
+        { cat: "Malaysia", title: "Astro AWANI", id: "1zGvj8Q967o" },
+        { cat: "Malaysia", title: "Bernama TV", id: "Ie-5o88r3aQ" },
+        { cat: "Malaysia", title: "Buletin TV3", id: "v25F88v-V-A" },
+        { cat: "Malaysia", title: "KiniTV", id: "U7Y8n9m0p1q" },
+        { cat: "Malaysia", title: "RTM Parlimen", id: "YfG_7l-V4Q4" },
+        // Asia
+        { cat: "Asia", title: "CNA Singapore", id: "Xy_5-4-972c" },
+        { cat: "Asia", title: "NHK World Japan", id: "D746k9f9o-Y" },
+        { cat: "Asia", title: "Arirang Korea", id: "9p0lFhO_3aE" },
+        { cat: "Asia", title: "CGTN China", id: "gXk9l8m7n6o" },
+        // International
+        { cat: "International", title: "Reuters", id: "kOkQ0BMbdNO" },
+        { cat: "International", title: "Al Jazeera", id: "zCk7onLX-7s" },
+        { cat: "International", title: "DW News", id: "w9S4blTn0Vk" },
+        { cat: "International", title: "France 24", id: "Q0oIoR9mLwc" },
+        { cat: "International", title: "Bloomberg", id: "dpwthQeigAI" },
+        // Sports
+        { cat: "Sports", title: "ESPN FC", id: "L9a5mP8QzXk" },
+        { cat: "Sports", title: "Sky Sports News", id: "S_1kL8mP0oQ" },
+        // Movies
+        { cat: "Movies", title: "Movie Trailers", id: "D-h22qE_3zU" },
+        { cat: "Movies", title: "FilmIsNow", id: "K9l8m7n6o5p" }
+    ];
+
+    const hub = document.getElementById('hub');
+
+    data.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.innerHTML = `
+            <iframe src="https://www.youtube.com/embed/${item.id}?autoplay=0&mute=1"></iframe>
+            <div class="info">
+                <div class="category">${item.cat}</div>
+                <h2>${item.title}</h2>
+            </div>
+        `;
+        div.addEventListener('click', () => {
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+            div.classList.add('active');
+        });
+        hub.appendChild(div);
+    });
+</script>
+</body>
+</html>
