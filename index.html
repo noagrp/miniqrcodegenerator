@@ -10,14 +10,14 @@
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; justify-content: center; padding: 20px; }
         .container { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
         h2 { text-align: center; color: var(--primary); margin-bottom: 20px; }
-        input, select, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 2px solid #eee; border-radius: 8px; box-sizing: border-box; }
+        label { font-size: 13px; font-weight: bold; color: #555; margin-top: 10px; display: block; }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 2px solid #eee; border-radius: 8px; box-sizing: border-box; }
         .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
         .swatch { width: 30px; height: 30px; border-radius: 4px; border: 1px solid #ccc; background: #000; }
         .color-picker { display: flex; align-items: center; gap: 8px; font-size: 14px; }
         button { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px; }
         #qrDisplay { display: flex; justify-content: center; margin: 25px 0; }
-        /* No border applied to canvas as requested */
-        canvas { display: block; } 
+        .hidden { display: none; }
     </style>
 </head>
 <body>
@@ -25,30 +25,27 @@
 <div class="container">
     <h2>Mini QR-Code Generator</h2>
     
+    <label>QR Type</label>
     <select id="type" onchange="updateUI()">
         <option value="url">Website URL</option>
+        <option value="wifi">WiFi</option>
         <option value="whatsapp">WhatsApp</option>
-        <option value="wifi">WiFi Password</option>
         <option value="vcard">vCard</option>
-        <option value="email">Email</option>
         <option value="sms">SMS</option>
-        <option value="geo">Location (Lat/Long)</option>
-        <option value="calendar">Calendar Event</option>
+        <option value="email">Email</option>
+        <option value="geo">Location</option>
     </select>
 
-    <input type="text" id="in1" placeholder="Data">
-    <input type="text" id="in2" placeholder="Extra">
+    <label id="l1">Website URL</label> <input type="text" id="in1">
+    <label id="l2" class="hidden">Extra</label> <input type="text" id="in2" class="hidden">
     
-    <div class="row">
-        <div><label>Resolution</label>
-            <select id="res">
-                <option value="128">Tiny (128px)</option>
-                <option value="256">Standard (256px)</option>
-                <option value="512">Web Standard  (512px)</option>
-                <option value="1024" selected>HD (1024px)</option>
-            </select>
-        </div>
-    </div>
+    <label>Resolution</label>
+    <select id="res">
+        <option value="128">Tiny (128px)</option>
+        <option value="256">Medium (256px)</option>
+        <option value="512">Web Standard (512px)</option>
+        <option value="1024" selected>HD (1024px)</option>
+    </select>
 
     <div class="row">
         <div class="color-picker"><input type="color" id="fgColor" value="#000000" oninput="generateQR()"> <div class="swatch" id="fgS" style="background:#000"></div> FG</div>
@@ -63,22 +60,43 @@
 <script>
     function updateUI() {
         const type = document.getElementById('type').value;
+        const l1 = document.getElementById('l1'), l2 = document.getElementById('l2');
         const in1 = document.getElementById('in1'), in2 = document.getElementById('in2');
-        if(type === 'url' || type === 'whatsapp') in2.style.display = 'none';
-        else in2.style.display = 'block';
+        l2.classList.add('hidden'); in2.classList.add('hidden');
+        
+        const cfg = {
+            url: {l1: "Website URL", p1: "https://example.com"},
+            wifi: {l1: "WiFi ID (SSID)", p1: "MyWiFi", l2: "WiFi Password", p2: "Password123"},
+            whatsapp: {l1: "WhatsApp Number", p1: "60123456789"},
+            vcard: {l1: "Full Name", p1: "John Doe", l2: "Phone", p2: "0123456789"},
+            sms: {l1: "Phone Number", p1: "0123456789", l2: "Message", p2: "Hello"},
+            email: {l1: "Email Address", p1: "email@example.com", l2: "Subject", p2: "Hello"},
+            geo: {l1: "Latitude", p1: "3.1390", l2: "Longitude", p2: "101.6869"}
+        };
+        const c = cfg[type];
+        l1.innerText = c.l1; in1.placeholder = c.p1;
+        if(c.l2) { l2.innerText = c.l2; in2.placeholder = c.p2; l2.classList.remove('hidden'); in2.classList.remove('hidden'); }
     }
 
     function generateQR() {
         const size = parseInt(document.getElementById('res').value);
         const container = document.getElementById('qrDisplay');
         container.innerHTML = "";
-        
         document.getElementById('fgS').style.background = document.getElementById('fgColor').value;
         document.getElementById('bgS').style.background = document.getElementById('bgColor').value;
 
+        const type = document.getElementById('type').value;
+        const v1 = document.getElementById('in1').value, v2 = document.getElementById('in2').value;
+        let data = v1;
+        if(type === 'wifi') data = `WIFI:T:WPA;S:${v1};P:${v2};;`;
+        else if(type === 'whatsapp') data = `https://wa.me/${v1}`;
+        else if(type === 'vcard') data = `BEGIN:VCARD\nFN:${v1}\nTEL:${v2}\nEND:VCARD`;
+        else if(type === 'sms') data = `smsto:${v1}:${v2}`;
+        else if(type === 'email') data = `mailto:${v1}?subject=${encodeURIComponent(v2)}`;
+        else if(type === 'geo') data = `geo:${v1},${v2}`;
+
         new QRCode(container, {
-            text: document.getElementById('in1').value || "https://google.com",
-            width: size, height: size,
+            text: data || "https://google.com", width: size, height: size,
             colorDark: document.getElementById('fgColor').value,
             colorLight: document.getElementById('bgColor').value,
             correctLevel: QRCode.CorrectLevel.H
@@ -93,6 +111,7 @@
         link.href = canvas.toDataURL("image/png");
         link.click();
     }
+    updateUI();
 </script>
 </body>
 </html>
