@@ -2,68 +2,97 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Mini News Hub</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini QR-Code Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { margin: 0; background: #080808; color: #fff; font-family: sans-serif; overflow-x: hidden; }
-        .carousel-container { display: flex; align-items: center; height: 100vh; overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 50px; }
-        .card { flex: 0 0 350px; height: 450px; background: #1a1a1a; margin: 0 20px; border-radius: 20px; transition: 0.5s; scroll-snap-align: center; border: 2px solid #333; display: flex; flex-direction: column; overflow: hidden; }
-        .card.active { transform: scale(1.1); border-color: #007bff; box-shadow: 0 0 20px rgba(0,123,255,0.4); }
-        iframe { width: 100%; height: 250px; border: none; pointer-events: none; }
-        .card.active iframe { pointer-events: auto; }
-        .info { padding: 20px; text-align: center; }
-        .category { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
-        h2 { margin: 10px 0; font-size: 18px; }
+        :root { --primary: #6200ea; --bg: #f4f5f7; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; justify-content: center; padding: 20px; }
+        .container { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
+        h2 { text-align: center; color: var(--primary); margin-bottom: 20px; }
+        input, select, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 2px solid #eee; border-radius: 8px; box-sizing: border-box; }
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .swatch { width: 30px; height: 30px; border-radius: 4px; border: 1px solid #ccc; background: #000; }
+        .color-picker { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+        button { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        #qrDisplay { display: flex; justify-content: center; margin: 25px 0; }
+        /* No border applied to canvas as requested */
+        canvas { display: block; } 
     </style>
 </head>
 <body>
 
-<div class="carousel-container" id="hub"></div>
+<div class="container">
+    <h2>Mini QR-Code Generator</h2>
+    
+    <select id="type" onchange="updateUI()">
+        <option value="url">Website URL</option>
+        <option value="whatsapp">WhatsApp</option>
+        <option value="wifi">WiFi Password</option>
+        <option value="vcard">vCard</option>
+        <option value="email">Email</option>
+        <option value="sms">SMS</option>
+        <option value="geo">Location (Lat/Long)</option>
+        <option value="calendar">Calendar Event</option>
+    </select>
+
+    <input type="text" id="in1" placeholder="Data">
+    <input type="text" id="in2" placeholder="Extra">
+    
+    <div class="row">
+        <div><label>Resolution</label>
+            <select id="res">
+                <option value="128">Screen (128px)</option>
+                <option value="256">Screen (256px)</option>
+                <option value="512">Medium (512px)</option>
+                <option value="1024" selected>HD (1024px)</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="color-picker"><input type="color" id="fgColor" value="#000000" oninput="generateQR()"> <div class="swatch" id="fgS" style="background:#000"></div> FG</div>
+        <div class="color-picker"><input type="color" id="bgColor" value="#ffffff" oninput="generateQR()"> <div class="swatch" id="bgS" style="background:#fff"></div> BG</div>
+    </div>
+    
+    <button onclick="generateQR()">Generate QR Code</button>
+    <div id="qrDisplay"></div>
+    <button id="dlBtn" class="hidden" onclick="downloadQR()">Download PNG</button>
+</div>
 
 <script>
-    const data = [
-        // Malaysia
-        { cat: "Malaysia", title: "Astro AWANI", id: "1zGvj8Q967o" },
-        { cat: "Malaysia", title: "Bernama TV", id: "Ie-5o88r3aQ" },
-        { cat: "Malaysia", title: "Buletin TV3", id: "v25F88v-V-A" },
-        { cat: "Malaysia", title: "KiniTV", id: "U7Y8n9m0p1q" },
-        { cat: "Malaysia", title: "RTM Parlimen", id: "YfG_7l-V4Q4" },
-        // Asia
-        { cat: "Asia", title: "CNA Singapore", id: "Xy_5-4-972c" },
-        { cat: "Asia", title: "NHK World Japan", id: "D746k9f9o-Y" },
-        { cat: "Asia", title: "Arirang Korea", id: "9p0lFhO_3aE" },
-        { cat: "Asia", title: "CGTN China", id: "gXk9l8m7n6o" },
-        // International
-        { cat: "International", title: "Reuters", id: "kOkQ0BMbdNO" },
-        { cat: "International", title: "Al Jazeera", id: "zCk7onLX-7s" },
-        { cat: "International", title: "DW News", id: "w9S4blTn0Vk" },
-        { cat: "International", title: "France 24", id: "Q0oIoR9mLwc" },
-        { cat: "International", title: "Bloomberg", id: "dpwthQeigAI" },
-        // Sports
-        { cat: "Sports", title: "ESPN FC", id: "L9a5mP8QzXk" },
-        { cat: "Sports", title: "Sky Sports News", id: "S_1kL8mP0oQ" },
-        // Movies
-        { cat: "Movies", title: "Movie Trailers", id: "D-h22qE_3zU" },
-        { cat: "Movies", title: "FilmIsNow", id: "K9l8m7n6o5p" }
-    ];
+    function updateUI() {
+        const type = document.getElementById('type').value;
+        const in1 = document.getElementById('in1'), in2 = document.getElementById('in2');
+        if(type === 'url' || type === 'whatsapp') in2.style.display = 'none';
+        else in2.style.display = 'block';
+    }
 
-    const hub = document.getElementById('hub');
+    function generateQR() {
+        const size = parseInt(document.getElementById('res').value);
+        const container = document.getElementById('qrDisplay');
+        container.innerHTML = "";
+        
+        document.getElementById('fgS').style.background = document.getElementById('fgColor').value;
+        document.getElementById('bgS').style.background = document.getElementById('bgColor').value;
 
-    data.forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'card';
-        div.innerHTML = `
-            <iframe src="https://www.youtube.com/embed/${item.id}?autoplay=0&mute=1"></iframe>
-            <div class="info">
-                <div class="category">${item.cat}</div>
-                <h2>${item.title}</h2>
-            </div>
-        `;
-        div.addEventListener('click', () => {
-            document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
-            div.classList.add('active');
+        new QRCode(container, {
+            text: document.getElementById('in1').value || "https://google.com",
+            width: size, height: size,
+            colorDark: document.getElementById('fgColor').value,
+            colorLight: document.getElementById('bgColor').value,
+            correctLevel: QRCode.CorrectLevel.H
         });
-        hub.appendChild(div);
-    });
+        document.getElementById('dlBtn').classList.remove('hidden');
+    }
+
+    function downloadQR() {
+        const canvas = document.querySelector("#qrDisplay canvas");
+        const link = document.createElement('a');
+        link.download = 'qr-code-' + document.getElementById('res').value + 'px.png';
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+    }
 </script>
 </body>
 </html>
